@@ -349,23 +349,32 @@ def display_product_details(details, site_name):
 
 
 # 新增的显示函数
+# def display_detail_section(title, content, key_prefix):
+#     if content:
+#         col1, col2 = st.columns([4, 1])
+#         with col1:
+#             st.markdown(f"{title}")
+#             st.markdown(content)
+#         with col2:
+#             copy_status = st.empty()
+#             if st.button("📋 复制", key=f"copy_{key_prefix}"):
+#                 pyperclip.copy(content)
+#                 copy_status.success("✅ 已复制!")
+#                 time.sleep(2)
+#                 copy_status.empty()
+
+
 def display_detail_section(title, content, key_prefix):
+    """显示详情部分的新函数，使用 Streamlit 的复制功能"""
     if content:
-        col1, col2 = st.columns([4, 1])
-        with col1:
-            st.markdown(f"{title}")
-            st.markdown(content)
-        with col2:
-            copy_status = st.empty()
-            if st.button("📋 复制", key=f"copy_{key_prefix}"):
-                pyperclip.copy(content)
-                copy_status.success("✅ 已复制!")
-                time.sleep(2)
-                copy_status.empty()
+        st.markdown(f"{title}")
+        st.markdown(content)
+        st.code(content, language=None)  # 使用 st.code 来显示可复制的文本块
+
 
 async def main():
     st.title("🌟 多网站爬虫系统 🌟 (异步 + 缓存)")
-
+    
     # 初始化 session state
     if 'mao_mao_results' not in st.session_state:
         st.session_state.mao_mao_results = []
@@ -380,24 +389,20 @@ async def main():
     if 'asian_page' not in st.session_state:
         st.session_state.asian_page = 1
 
-    # 搜索输入
+    # 搜索输入和按钮
     productname = st.text_input("🔍 输入要搜索的产品关键词:", key="search_input")
-
-    # 搜索按钮
     if st.button("🔎 开始搜索", key="start_search_button") and productname:
         with st.spinner("正在异步搜索两个网站..."):
-            # 使用异步方式同时搜索两个网站
             st.session_state.mao_mao_results, st.session_state.asian_food_results = await asyncio.gather(
                 async_search_mao_mao(productname),
                 async_search_asian_food(productname)
             )
-            # 重置状态
             st.session_state.details_visibility = {}
             st.session_state.details_data = {}
             st.session_state.mao_page = 1
             st.session_state.asian_page = 1
 
-    # 使用选项卡显示不同网站的结果
+    # 使用选项卡显示结果
     tab1, tab2 = st.tabs(["🛒 MaoMao", "🛒 AsianFoodLovers"])
 
     # MaoMao 结果显示
@@ -424,21 +429,18 @@ async def main():
             # 显示每个产品
             for idx, product in enumerate(st.session_state.mao_mao_results[start_idx:end_idx]):
                 product_key = f"mao_{idx}_{product['name']}"
-
+                
                 with st.container():
                     cols = st.columns([1, 3, 1, 1])
-
-                    # 产品图片
+                    
                     with cols[0]:
                         if product.get("image_url"):
                             st.image(product["image_url"], width=150)
-
-                    # 产品基本信息
+                    
                     with cols[1]:
                         st.subheader(product["name"])
                         st.markdown(f"💶 **价格**: {product['price']}")
-
-                    # 下载图片按钮
+                    
                     with cols[2]:
                         if product.get("image_url"):
                             st.download_button(
@@ -447,14 +449,12 @@ async def main():
                                 file_name=f"{product['name']}.jpg",
                                 key=f"download_{product_key}"
                             )
-
-                    # 查看详情按钮
+                    
                     with cols[3]:
                         if st.button("🔍 查看详情", key=f"detail_{product_key}"):
                             if product["name"] not in st.session_state.details_data:
                                 with st.spinner("正在获取详情..."):
-                                    st.session_state.details_data[product["name"]] = await async_get_mao_mao_detail(
-                                        product["url"])
+                                    st.session_state.details_data[product["name"]] = await async_get_mao_mao_detail(product["url"])
                             st.session_state.details_visibility[product["name"]] = \
                                 not st.session_state.details_visibility.get(product["name"], False)
 
@@ -463,64 +463,48 @@ async def main():
                         details = st.session_state.details_data[product["name"]]
                         if details:
                             with st.expander("📋 详细信息", expanded=True):
-                                left_col, right_col = st.columns([1, 2])
+                                if details.get('image_url'):
+                                    st.image(details['image_url'], width=300)
 
-                                with left_col:
-                                    if details.get('image_url'):
-                                        st.image(details['image_url'], width=300)
-
-                                with right_col:
-                                    # 描述信息
-                                    if details.get('description'):
-                                        st.markdown("📝 **商品描述:**")
-                                        st.markdown(details['description'])
-                                        if st.button("📋 复制描述", key=f"copy_desc_{product_key}"):
-                                            pyperclip.copy(details['description'])
-                                            st.success("✅ 已复制到剪贴板!")
-
-                                    # 存储信息
-                                    if details.get('storage_info'):
-                                        st.markdown("🏪 **存储说明:**")
-                                        st.markdown(details['storage_info'])
-                                        if st.button("📋 复制存储说明", key=f"copy_storage_{product_key}"):
-                                            pyperclip.copy(details['storage_info'])
-                                            st.success("✅ 已复制到剪贴板!")
-
-                                    # 准备说明
-                                    if details.get('preparation_info'):
-                                        st.markdown("👨‍🍳 **准备说明:**")
-                                        st.markdown(details['preparation_info'])
-                                        if st.button("🍳 复制准备说明", key=f"copy_prepare_{product_key}"):
-                                            pyperclip.copy(details['preparation_info'])
-                                            st.success("✅ 已复制到剪贴板!")
-
-                                    # 营养信息
-                                    if details.get('nutrition'):
-                                        st.markdown("📊 **营养信息:**")
-                                        nutrition_text = "\n".join(
-                                            [f"{key}: {value}" for key, value in details['nutrition'].items() if value]
-                                        )
-                                        for key, value in details['nutrition'].items():
-                                            if value:
-                                                st.markdown(f"- **{key}**: {value}")
-                                        if st.button("📋 复制营养信息", key=f"copy_nutrition_{product_key}"):
-                                            pyperclip.copy(nutrition_text)
-                                            st.success("✅ 已复制到剪贴板!")
-
-                                    # 配料信息
-                                    if details.get('ingredients'):
-                                        st.markdown("🧬 **配料表:**")
-                                        st.markdown(details['ingredients'])
-                                        if st.button("📋 复制配料", key=f"copy_ingredients_{product_key}"):
-                                            pyperclip.copy(details['ingredients'])
-                                            st.success("✅ 已复制到剪贴板!")
-
-                                    # 产品链接
-                                    url = product["url"]  # 使用搜索结果中保存的原始 URL
-                                    st.markdown(
-                                        f"""🔗 **产品链接:** <a href="{url}" target="_blank">{url}</a>""",
-                                        unsafe_allow_html=True
+                                if details.get('description'):
+                                    display_detail_section(
+                                        "📝 **商品描述:**",
+                                        details['description'],
+                                        f"desc_{product_key}"
                                     )
+
+                                if details.get('storage_info'):
+                                    display_detail_section(
+                                        "🏪 **存储说明:**",
+                                        details['storage_info'],
+                                        f"storage_{product_key}"
+                                    )
+
+                                if details.get('preparation_info'):
+                                    display_detail_section(
+                                        "👨‍🍳 **准备说明:**",
+                                        details['preparation_info'],
+                                        f"prep_{product_key}"
+                                    )
+
+                                if details.get('nutrition'):
+                                    st.markdown("📊 **营养信息:**")
+                                    nutrition_text = "\n".join(
+                                        [f"{key}: {value}" for key, value in details['nutrition'].items() if value]
+                                    )
+                                    st.code(nutrition_text, language=None)
+                                
+                                if details.get('ingredients'):
+                                    display_detail_section(
+                                        "🧬 **配料表:**",
+                                        details['ingredients'],
+                                        f"ingredients_{product_key}"
+                                    )
+
+                                st.markdown(
+                                    f"""🔗 **产品链接:** <a href="{product['url']}" target="_blank">{product['url']}</a>""",
+                                    unsafe_allow_html=True
+                                )
         else:
             st.info("暂无 MaoMao 搜索结果")
 
