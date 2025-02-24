@@ -1,7 +1,7 @@
-streamlit==1.30.0
-requests==2.31.0
-aiohttp==3.8.6
+streamlit
+requests
+aiohttp>=3.9.0  # 使用最新的稳定版本，它支持 Python 3.12
 asyncio
-beautifulsoup4==4.12.2
-pyperclip==1.8.2
-nest_asyncio==1.5.8
+beautifulsoup4
+nest-asyncio
+pyperclip
