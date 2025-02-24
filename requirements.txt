@@ -1,1 +1,8 @@
 streamlit
+requests
+asyncio
+aiohttp
+beautifulsoup4
+jaccard-similarity
+pyperclip
+nest_asyncio
